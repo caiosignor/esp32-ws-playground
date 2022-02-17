@@ -4,83 +4,107 @@
 #include <ESPAsyncWebServer.h>
 #include "private.h"
 #include <SPIFFS.h>
-
-//https://RandomNerdTutorials.com/esp32-websocket-server-arduino/
+#include <vector>
+#include <cJSON.h>
 
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
-bool ledState = 0;
-const int ledPin = 2;
+std::vector<String> clients(5);
 
-void notifyClients() {
-  ws.textAll(String(ledState));
+void sendClientList()
+{
+  cJSON *root, *client_list, *_client;
+  
+  root = cJSON_CreateObject();
+  cJSON_AddStringToObject(root, "type", "client_list");
+  client_list = cJSON_CreateArray();
+
+  for (int i = 0; i < clients.size(); i++)
+  {
+    if(!clients[i].isEmpty())
+    {
+      _client = cJSON_CreateObject();
+      cJSON_AddStringToObject(_client, "name", clients.at(i).c_str());
+      cJSON_AddNumberToObject(_client, "id", (double)i);
+      cJSON_AddItemToArray(client_list, _client);
+    }
+  }
+  cJSON_AddItemToObject(root, "payload", client_list);
+  ws.textAll(cJSON_PrintUnformatted(root));
+  cJSON_Delete(root);
 }
 
-void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
-  AwsFrameInfo *info = (AwsFrameInfo*)arg;
-  if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
-    data[len] = 0;
-    if (strcmp((char*)data, "toggle") == 0) {
-      ledState = !ledState;
-      notifyClients();
+void handleWebSocketMessage(AsyncWebSocketClient *client, void *arg, uint8_t *data, size_t len)
+{
+  Serial.printf("msg from %d: %s\n", client->id(), data);
+  cJSON *json = cJSON_Parse((char *)data);
+  if (json != NULL)
+  {
+    if (cJSON_HasObjectItem(json, "type"))
+    {
+      cJSON *payload = cJSON_GetObjectItem(json, "payload");
+
+      cJSON *type = cJSON_GetObjectItem(json, "type");
+      char *type_val = cJSON_GetStringValue(type);
+      Serial.printf("\t type: %s\n", type_val);
+      if (strcmp(type_val, "join") == 0)
+      {
+        char *name = cJSON_GetObjectItem(payload, "name")->valuestring;
+        clients.at(client->id()) = String(name);        
+        Serial.printf("\tid %d registered as %s\n", client->id(), clients.at(client->id()).c_str());
+        sendClientList();
+      }
     }
+    cJSON_Delete(json);
   }
 }
 
 void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type,
-             void *arg, uint8_t *data, size_t len) {
-  switch (type) {
-    case WS_EVT_CONNECT:
-      Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
-      break;
-    case WS_EVT_DISCONNECT:
-      Serial.printf("WebSocket client #%u disconnected\n", client->id());
-      break;
-    case WS_EVT_DATA:
-      handleWebSocketMessage(arg, data, len);
-      break;
-    case WS_EVT_PONG:
-    case WS_EVT_ERROR:
-      break;
+             void *arg, uint8_t *data, size_t len)
+{
+  switch (type)
+  {
+  case WS_EVT_CONNECT:
+    Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+    break;
+  case WS_EVT_DISCONNECT:
+    Serial.printf("WebSocket client #%u disconnected\n", client->id());
+    clients[client->id()].clear();
+    break;
+  case WS_EVT_DATA:
+    handleWebSocketMessage(client, arg, data, len);
+    break;
+  case WS_EVT_PONG:
+  case WS_EVT_ERROR:
+    break;
   }
 }
 
-void initWebSocket() {
+void initWebSocket()
+{
   ws.onEvent(onEvent);
   server.addHandler(&ws);
 }
 
-String processor(const String& var){
-  Serial.println(var);
-  if(var == "STATE"){
-    if (ledState){
-      return "ON";
-    }
-    else{
-      return "OFF";
-    }
-  }
-  return String();
-}
-
-void setup(){
+void setup()
+{
   // Serial port for debugging purposes
   Serial.begin(115200);
 
   // Initialize SPIFFS
-  if(!SPIFFS.begin(true)){
+  if (!SPIFFS.begin(true))
+  {
     Serial.println("An Error has occurred while mounting SPIFFS");
     return;
   }
 
-  pinMode(ledPin, OUTPUT);
-  digitalWrite(ledPin, LOW);
-  
   // Connect to Wi-Fi
   WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
+
+  while (WiFi.status() != WL_CONNECTED)
+  {
     delay(1000);
     Serial.println("Connecting to WiFi..");
   }
@@ -90,13 +114,13 @@ void setup(){
 
   server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
 
-  initWebSocket();  
+  initWebSocket();
 
   // Start server
   server.begin();
 }
 
-void loop() {
+void loop()
+{
   ws.cleanupClients();
-  digitalWrite(ledPin, ledState);
 }
