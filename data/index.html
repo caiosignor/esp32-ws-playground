@@ -331,7 +331,7 @@
 
 
 <script>
-  var id_friend;
+  var id_friend = null;
   class ChatMessage {
     constructor(ts, msg, from) {
       this.from = from
@@ -391,9 +391,11 @@
         break;
       case "chat_message":
         var data = json["payload"];
-
         if (friends_list[data.from]) {
           friends_list[data.from].chatHist.push(new ChatMessage(new Date(), data.msg, "friend"));
+        }
+        if (id_friend == data.from) {
+          addChatList(id_friend);
         }
         break;
     }
@@ -412,7 +414,7 @@
     friend.chatHist.forEach(element => {
       if (element != null) {
         $("#chatHist").append(`<li class="clearfix">
-        <div class="message-data"> <span class="message-data-time ${element.from == "friend" ? '' : 'other-message text-right'}">${new Date(element.ts)}</span></div>
+        <div class="message-data ${element.from == "friend" ? '' : 'text-right'}"> <span class="message-data-time">${(new Date(element.ts)).toLocaleTimeString()}</span></div>
         <div class="message ${element.from == "friend" ? 'my-message' : 'other-message float-right'}">${element.msg}</div>
       </li>`);
       }
