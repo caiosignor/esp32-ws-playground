@@ -11,7 +11,13 @@
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
-std::vector<String> clients(5);
+typedef struct _Client{
+  int id;
+  String name;
+  String avatar;
+} StClient;
+
+std::vector<StClient> clients(5);
 
 void sendClientList()
 {
@@ -23,11 +29,12 @@ void sendClientList()
 
   for (int i = 0; i < clients.size(); i++)
   {
-    if(!clients[i].isEmpty())
+    if(!clients[i].name.isEmpty())
     {
       _client = cJSON_CreateObject();
-      cJSON_AddStringToObject(_client, "name", clients.at(i).c_str());
       cJSON_AddNumberToObject(_client, "id", (double)i);
+      cJSON_AddStringToObject(_client, "name", clients.at(i).name.c_str());
+      cJSON_AddStringToObject(_client, "avatar", clients.at(i).avatar.c_str());
       cJSON_AddItemToArray(client_list, _client);
     }
   }
@@ -52,8 +59,10 @@ void handleWebSocketMessage(AsyncWebSocketClient *client, void *arg, uint8_t *da
       if (strcmp(type_val, "join") == 0)
       {
         char *name = cJSON_GetObjectItem(payload, "name")->valuestring;
-        clients.at(client->id()) = String(name);        
-        Serial.printf("\tid %d registered as %s\n", client->id(), clients.at(client->id()).c_str());
+        char *avatar = cJSON_GetObjectItem(payload, "avatar")->valuestring;
+        clients.at(client->id()).name = String(name);
+        clients.at(client->id()).avatar = String(avatar);
+        Serial.printf("\tid %d registered as %s\n", client->id(), clients.at(client->id()).name.c_str());
         sendClientList();
       }
 
@@ -91,7 +100,7 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
     break;
   case WS_EVT_DISCONNECT:
     Serial.printf("WebSocket client #%u disconnected\n", client->id());
-    clients[client->id()].clear();
+    clients[client->id()].name.clear();
     break;
   case WS_EVT_DATA:
     handleWebSocketMessage(client, arg, data, len);

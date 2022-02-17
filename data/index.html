@@ -341,15 +341,20 @@
   }
 
   class Friend {
-    constructor(id, name) {
+    constructor(id, name, avatar_url = null) {
       this.id = id;
       this.name = name;
       this.chatHist = new Array(100);
       var max = 5;
       var min = 1;
       var random_id = Math.floor((Math.random() * (max - min)) + min);
-      var avatar_url = `https://bootdey.com/img/Content/avatar/avatar${random_id}.png`;
-      this.avatar = avatar_url
+      if (avatar_url == null) {
+        this.avatar = `https://bootdey.com/img/Content/avatar/avatar${random_id}.png`;
+      }
+      else {
+        this.avatar = avatar_url
+      }
+
     }
   }
 
@@ -369,7 +374,7 @@
   function onOpen(event) {
     console.log('Connection opened');
     console.log(event);
-    var me = new Friend(null, myName);
+    var me = new Friend(null, myName,null);
     websocket.send(JSON.stringify({
       type: 'join',
       payload: {
@@ -391,7 +396,7 @@
         var clients = json["payload"];
         clients.forEach(element => {
           if (element.name != myName && friends_list[element.id] == undefined) {
-            friends_list[element.id] = new Friend(element.id, element.name);
+            friends_list[element.id] = new Friend(element.id, element.name, element.avatar);
             addToUserList(friends_list[element.id]);
           }
         });
@@ -451,8 +456,7 @@
       `<li class="clearfix" onClick="addChatList(${user.id})">
         <img src="${user.avatar}" alt="avatar">
           <div class="about">
-            <div class="name">${user.name}</div>
-            <div class="status"> <i class="fa fa-circle offline"></i> left 7 mins ago </div>
+            <div class="name">${user.name}</div>            
           </div>
         </li>`);
   }
