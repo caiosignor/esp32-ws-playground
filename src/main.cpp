@@ -56,6 +56,26 @@ void handleWebSocketMessage(AsyncWebSocketClient *client, void *arg, uint8_t *da
         Serial.printf("\tid %d registered as %s\n", client->id(), clients.at(client->id()).c_str());
         sendClientList();
       }
+
+      if (strcmp(type_val, "chat_message") == 0)
+      {
+        int to = cJSON_GetObjectItem(payload, "to")->valueint;
+        char *msg = cJSON_GetObjectItem(payload, "msg")->valuestring;
+
+        cJSON *root, *payload, *obj_payload;
+        root = cJSON_CreateObject();
+        cJSON_AddStringToObject(root, "type", "chat_message");
+        payload = cJSON_CreateObject();
+
+        cJSON_AddStringToObject(payload, "msg", msg);
+        cJSON_AddNumberToObject(payload, "from", (double)client->id());
+        cJSON_AddItemToObject(root, "payload", payload);
+        char *str = cJSON_PrintUnformatted(root);
+        ws.text(to, str);
+        cJSON_Delete(root);
+        Serial.printf("ws send %s to client %d\n", str, to);
+      }
+
     }
     cJSON_Delete(json);
   }

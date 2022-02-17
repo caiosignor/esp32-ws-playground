@@ -391,10 +391,9 @@
         break;
       case "chat_message":
         var data = json["payload"];
-        var friend = friends_list[data.from];
-        if (friend) {
-          friend.chatHist[data.ts] = new ChatMessage(data.ts, data.msg, data.from);
-          addToChatHistory(friend.id, friend.chatHist[data.ts].msg, friend.chatHist[data.ts].from);
+
+        if (friends_list[data.from]) {
+          friends_list[data.from].chatHist.push(new ChatMessage(new Date(), data.msg, "friend"));
         }
         break;
     }
@@ -409,8 +408,8 @@
   function addChatList(id) {
     id_friend = id;
     var friend = friends_list[id];
+    $("#chatHist").empty();
     friend.chatHist.forEach(element => {
-      $("#chatHist").empty();
       if (element != null) {
         $("#chatHist").append(`<li class="clearfix">
         <div class="message-data"> <span class="message-data-time ${element.from == "friend" ? '' : 'other-message text-right'}">${new Date(element.ts)}</span></div>
@@ -432,6 +431,7 @@
     }));
     $("#message").val("");
     friends_list[id_friend].chatHist.push(newMsg);
+    addChatList(id_friend);
   }
 
   function addToUserList(id, username) {
