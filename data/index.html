@@ -383,7 +383,7 @@
       case "client_list":
         var clients = json["payload"];
         clients.forEach(element => {
-          if (element.name != myName) {
+          if (element.name != myName && friends_list[element.id]==undefined) {
             friends_list[element.id] = new Friend(element.id, element.name);
             addToUserList(friends_list[element.id].id, friends_list[element.id].name);
           }
