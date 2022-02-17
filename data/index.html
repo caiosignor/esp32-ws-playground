@@ -42,28 +42,15 @@
                 </div>
               </div>
               <div class="chat-history">
-                <ul class="m-b-0">
-                  <li class="clearfix">
-                    <div class="message-data text-right"> <span class="message-data-time">10:10 AM, Today</span> <img
-                        src="https://bootdey.com/img/Content/avatar/avatar7.png" alt="avatar"></div>
-                    <div class="message other-message float-right"> Hi Aiden, how are you? How is the project coming
-                      along?</div>
-                  </li>
-                  <li class="clearfix">
-                    <div class="message-data"> <span class="message-data-time">10:12 AM, Today</span></div>
-                    <div class="message my-message">Are we meeting today?</div>
-                  </li>
-                  <li class="clearfix">
-                    <div class="message-data"> <span class="message-data-time">10:15 AM, Today</span></div>
-                    <div class="message my-message">Project has been already finished and I have results to show you.
-                    </div>
-                  </li>
+                <ul class="m-b-0" id="chatHist">
+
                 </ul>
               </div>
               <div class="chat-message clearfix">
                 <div class="input-group mb-0">
-                  <div class="input-group-prepend"> <span class="input-group-text"><i class="fa fa-send"></i></span>
-                  </div> <input type="text" class="form-control" placeholder="Enter text here...">
+                  <div class="input-group-prepend"> <span class="input-group-text" onClick="sendMessage()"><i
+                        class="fa fa-send"></i></span>
+                  </div> <input type="text" class="form-control" placeholder="Enter text here..." id="message">
                 </div>
               </div>
             </div>
@@ -344,6 +331,23 @@
 
 
 <script>
+  var id_friend;
+  class ChatMessage {
+    constructor(ts, msg, from) {
+      this.from = from
+      this.msg = msg;
+      this.ts = ts;
+    }
+  }
+
+  class Friend {
+    constructor(id, name) {
+      this.id = id;
+      this.name = name;
+      this.chatHist = new Array(100);
+    }
+  }
+
   var friends_list = new Array(5);
   var gateway = `ws://${window.location.hostname}/ws`;
   var websocket;
@@ -373,28 +377,69 @@
     setTimeout(initWebSocket, 2000);
   }
 
-  function onMessage(event) {
-    console.log(event);
-    var data = JSON.parse(event.data);
-    if (data["type"] == "message") {
-      var message = data["payload"]["message"];
-    } else if (data["type"] == "client_list") {
-      var clients = data["payload"];
-      clients.forEach(element => {
-        if (element.name != myName) {
-          addToUserList(element.name);
+  function handleSocketEvent(json) {
+    var type = json["type"];
+    switch (type) {
+      case "client_list":
+        var clients = json["payload"];
+        clients.forEach(element => {
+          if (element.name != myName) {
+            friends_list[element.id] = new Friend(element.id, element.name);
+            addToUserList(friends_list[element.id].id, friends_list[element.id].name);
+          }
+        });
+        break;
+      case "chat_message":
+        var data = json["payload"];
+        var friend = friends_list[data.from];
+        if (friend) {
+          friend.chatHist[data.ts] = new ChatMessage(data.ts, data.msg, data.from);
+          addToChatHistory(friend.id, friend.chatHist[data.ts].msg, friend.chatHist[data.ts].from);
         }
-      })
+        break;
     }
   }
 
-  function addToUserList(username) {
+  function onMessage(event) {
+    var data = JSON.parse(event.data);
+    console.log(data);
+    handleSocketEvent(data);
+  }
+
+  function addChatList(id) {
+    id_friend = id;
+    var friend = friends_list[id];
+    friend.chatHist.forEach(element => {
+      $("#chatHist").empty();
+      if (element != null) {
+        $("#chatHist").append(`<li class="clearfix">
+        <div class="message-data"> <span class="message-data-time ${element.from == "friend" ? '' : 'other-message text-right'}">${new Date(element.ts)}</span></div>
+        <div class="message ${element.from == "friend" ? 'my-message' : 'other-message float-right'}">${element.msg}</div>
+      </li>`);
+      }
+    });
+  }
+
+  function sendMessage() {
+    var msg = $("#message").val();
+    var newMsg = new ChatMessage(new Date().getTime(), msg, "me");
+    websocket.send(JSON.stringify({
+      type: 'chat_message',
+      payload: {
+        msg: msg,
+        to: id_friend
+      }
+    }));
+    $("#message").val("");
+    friends_list[id_friend].chatHist.push(newMsg);
+  }
+
+  function addToUserList(id, username) {
     var max = 5;
     var min = 1;
     random_id = Math.floor((Math.random() * (max - min)) + min);
-    console.log(random_id);
     $("#plist").append(
-        `<li class="clearfix">
+      `<li class="clearfix" onClick="addChatList(${id})">
         <img src="https://bootdey.com/img/Content/avatar/avatar${random_id}.png" alt="avatar">
           <div class="about">
             <div class="name">${username}</div>
