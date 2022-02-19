@@ -92,20 +92,17 @@ void TicTacToe::clientDisconnect(int id)
 cJSON *TicTacToe::getGameBoard()
 {
     cJSON *root = cJSON_CreateObject();
-    cJSON *row0 = cJSON_CreateArray();
-    cJSON *row1 = cJSON_CreateArray();
-    cJSON *row2 = cJSON_CreateArray();
+    cJSON *table = cJSON_CreateArray();
 
-    for (int j = 0; j < 3; j++)
+    for (int i = 0; i < 3; i++)
     {
-        cJSON_AddItemToArray(row0, cJSON_CreateNumber(board[0][j]));
-        cJSON_AddItemToArray(row1, cJSON_CreateNumber(board[1][j]));
-        cJSON_AddItemToArray(row2, cJSON_CreateNumber(board[2][j]));
+        for (int j = 0; j < 3; j++)
+        {
+            cJSON_AddItemToArray(table, cJSON_CreateNumber(board[i][j]));
+        }
     }
 
-    cJSON_AddItemToObject(root, "row0", row0);
-    cJSON_AddItemToObject(root, "row1", row1);
-    cJSON_AddItemToObject(root, "row2", row2);
+    cJSON_AddItemToObject(root, "table", table);
 
     return root;
 }

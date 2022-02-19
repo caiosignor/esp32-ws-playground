@@ -34,6 +34,7 @@ void handleWebSocketMessage(AsyncWebSocketClient *client, void *arg, uint8_t *da
 {
   AwsFrameInfo *info = (AwsFrameInfo *)arg;
   if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT)
+  Serial.println((char*)data);
   {
     cJSON *root;
     root = cJSON_Parse((const char *)data);
