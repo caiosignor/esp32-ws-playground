@@ -11,21 +11,14 @@
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
-bool ledState = 0;
-const int ledPin = 2;
-
 void notifyClients() {
-  ws.textAll(String(ledState));
+  
 }
 
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
   AwsFrameInfo *info = (AwsFrameInfo*)arg;
   if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
     data[len] = 0;
-    if (strcmp((char*)data, "toggle") == 0) {
-      ledState = !ledState;
-      notifyClients();
-    }
   }
 }
 
@@ -52,19 +45,6 @@ void initWebSocket() {
   server.addHandler(&ws);
 }
 
-String processor(const String& var){
-  Serial.println(var);
-  if(var == "STATE"){
-    if (ledState){
-      return "ON";
-    }
-    else{
-      return "OFF";
-    }
-  }
-  return String();
-}
-
 void setup(){
   // Serial port for debugging purposes
   Serial.begin(115200);
@@ -75,9 +55,6 @@ void setup(){
     return;
   }
 
-  pinMode(ledPin, OUTPUT);
-  digitalWrite(ledPin, LOW);
-  
   // Connect to Wi-Fi
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
@@ -98,5 +75,4 @@ void setup(){
 
 void loop() {
   ws.cleanupClients();
-  digitalWrite(ledPin, ledState);
 }
