@@ -86,7 +86,7 @@ var websocket;
 
 function initWebSocket() {
   var gateway = `ws://${window.location.hostname}/ws`;
-  console.log('Trying to open a WebSocket connection... '+gateway);
+  console.log('Trying to open a WebSocket connection... ' + gateway);
   websocket = new WebSocket(gateway);
   websocket.onopen = onOpen;
   websocket.onclose = onClose;
@@ -98,24 +98,18 @@ function onOpen(event) {
 }
 
 function onClose(event) {
-  console.log('Connection closed');  
+  console.log('Connection closed');
 }
 
 function onMessage(event) {
   var json = JSON.parse(event.data);
-  console.log(json);
   if (json.type == 'gameboard') {
     var table = json.payload.table;
-    for(index in table)
-    { 
-      console.log(table[index]);
-      if(table[index] == 120)
-      {
-        cellElements[index].classList.add(X_CLASS);
-      }else if(table[index] == 111)
-      {
-        cellElements[index].classList.add(CIRCLE_CLASS);
+    for (index in table) {
+      switch (table[index]) {
+        case 120: cellElements[index].classList.add(X_CLASS); break;
+        case 111: cellElements[index].classList.add(CIRCLE_CLASS); break;
       }
-    }    
-  }  
+    }
+  }
 }
