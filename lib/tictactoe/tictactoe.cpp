@@ -35,17 +35,54 @@ char TicTacToe::checkWin()
     for (int i = 0; i < 3; i++)
     {
         if (board[i][0] == 'x' && board[i][1] == 'x' && board[i][2] == 'x')
+        {
+            p_x.score++;
             return 'x';
+        }
         if (board[0][i] == 'x' && board[1][i] == 'x' && board[2][i] == 'x')
+        {
+            p_x.score++;
             return 'x';
+        }
 
         if (board[i][0] == 'o' && board[i][1] == 'o' && board[i][2] == 'o')
+        {
+            p_o.score++;
             return 'o';
+        }
         if (board[0][i] == 'o' && board[1][i] == 'o' && board[2][i] == 'o')
+        {
+            p_o.score++;
             return 'o';
+        }
     }
 
-    return 'n';
+    // check diagonals
+    if (board[0][0] == 'x' && board[1][1] == 'x' && board[2][2] == 'x')
+    {
+        p_x.score++;
+        return 'x';
+    }
+    if (board[0][0] == 'o' && board[1][1] == 'o' && board[2][2] == 'o')
+    {
+        p_o.score++;
+        return 'o';
+    }
+
+    if (board[0][2] == 'x' && board[1][1] == 'x' && board[2][0] == 'x')
+    {
+        p_x.score++;
+        return 'x';
+    }
+
+    if (board[0][2] == 'o' && board[1][1] == 'o' && board[2][0] == 'o')
+    {
+        p_o.score++;
+        return 'o';
+    }
+
+
+    return 0;
 }
 
 void TicTacToe::restart()
@@ -59,20 +96,20 @@ void TicTacToe::restart()
     }
 }
 
-bool TicTacToe::registerPlayer(int id)
+char TicTacToe::registerPlayer(int id)
 {
     if (this->p_x.socket_id == 0)
     {
         this->p_x.socket_id = id;
-        return true;
+        return p_x.symbol;
     }
     else if (this->p_o.socket_id == 0)
     {
         this->p_o.socket_id = id;
-        return true;
+        return p_o.symbol;
     }
 
-    return false;
+    return 0;
 }
 
 void TicTacToe::clientDisconnect(int id)
@@ -105,4 +142,14 @@ cJSON *TicTacToe::getGameBoard()
     cJSON_AddItemToObject(root, "table", table);
 
     return root;
+}
+
+int TicTacToe::getScoreX()
+{
+    return this->p_x.score;
+}
+
+int TicTacToe::getScoreO()
+{
+    return this->p_o.score;
 }

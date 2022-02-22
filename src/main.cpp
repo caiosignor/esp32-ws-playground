@@ -14,8 +14,35 @@ AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 TicTacToe game;
 
-void sendWinner()
+void sendPlayerSymbol(AsyncWebSocketClient *client, char symbol) {
+  cJSON *root, *payload;
+
+  root = cJSON_CreateObject();
+  payload = cJSON_CreateObject();
+  cJSON_AddStringToObject(root, "type", "symbol");
+  cJSON_AddNumberToObject(payload, "symbol", symbol);
+  cJSON_AddItemToObject(root, "payload", payload);
+
+  client->printf("%s", cJSON_PrintUnformatted(root));
+
+  cJSON_Delete(root);
+}
+
+void sendWinner(char symbol)
 {
+  cJSON *root, *payload;
+
+  root = cJSON_CreateObject();
+  payload = cJSON_CreateObject();
+  cJSON_AddStringToObject(root, "type", "winner");
+  cJSON_AddNumberToObject(payload, "symbol", symbol);
+  cJSON_AddNumberToObject(payload, "score_x", game.getScoreX());
+  cJSON_AddNumberToObject(payload, "score_o", game.getScoreO());
+  cJSON_AddItemToObject(root, "payload", payload);
+
+  ws.textAll(cJSON_PrintUnformatted(root));
+
+  cJSON_Delete(root);
 }
 
 void sendGameBoard()
@@ -43,7 +70,10 @@ void handleWebSocketMessage(AsyncWebSocketClient *client, void *arg, uint8_t *da
       char *type = cJSON_GetStringValue(cJSON_GetObjectItem(root, "type"));
 
       if (strcmp(type, "restart") == 0)
+      {
         game.restart();
+        ws.textAll("{\"type\":\"restart\"}");
+      }
 
       if (strcmp(type, "place") == 0)
       {
@@ -52,6 +82,9 @@ void handleWebSocketMessage(AsyncWebSocketClient *client, void *arg, uint8_t *da
         int j = cJSON_GetObjectItem(payload, "j")->valueint;
         game.place(client->id(), i, j);
         sendGameBoard();
+        char winner = game.checkWin();
+        if(winner)
+          sendWinner(winner);
       }
       cJSON_Delete(root);
     }
@@ -68,9 +101,14 @@ void onEvent(AsyncWebSocket *server,
   switch (type)
   {
   case WS_EVT_CONNECT:
+  {
     Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
-    if (!game.registerPlayer(client->id()))
+    char symbol = game.registerPlayer(client->id());
+    if (symbol != 0)
+      sendPlayerSymbol(client, symbol);
+    else
       client->printf("{\"type\":\"error\",\"message\":\"Game is full\"}");
+  }
     break;
   case WS_EVT_DISCONNECT:
     Serial.printf("WebSocket client #%u disconnected\n", client->id());

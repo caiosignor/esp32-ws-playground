@@ -12,7 +12,16 @@ const winningMessageTextElement = document.querySelector('[data-winning-message-
 startGame()
 initWebSocket();
 
-restartButton.addEventListener('click', startGame)
+restartButton.addEventListener('click', restartGame)
+
+var mySymbol;
+
+function restartGame() {
+  var msg = {
+    type: 'restart',
+  }
+  websocket.send(JSON.stringify(msg));
+}
 
 function startGame() {
   circleTurn = false
@@ -46,11 +55,7 @@ function handleClick(e) {
 }
 
 function endGame(draw) {
-  if (draw) {
-    winningMessageTextElement.innerText = 'Draw!'
-  } else {
-    winningMessageTextElement.innerText = `${circleTurn ? "O's" : "X's"} Wins!`
-  }
+  winningMessageTextElement.innerText = `${draw == CIRCLE_CLASS ? "O's" : "X's"} Wins!`
   winningMessageElement.classList.add('show')
 }
 
@@ -73,13 +78,8 @@ function placeMark(i, j) {
 }
 
 function setBoardHoverClass() {
-  board.classList.remove(X_CLASS)
-  board.classList.remove(CIRCLE_CLASS)
-  if (circleTurn) {
-    board.classList.add(CIRCLE_CLASS)
-  } else {
-    board.classList.add(X_CLASS)
-  }
+
+  board.classList.add(mySymbol);
 }
 
 var websocket;
@@ -101,15 +101,33 @@ function onClose(event) {
   console.log('Connection closed');
 }
 
+function getSymbol(symbol) {
+  switch (symbol) {
+    case 120: return X_CLASS; break;
+    case 111: return CIRCLE_CLASS; break;
+  }
+}
+
 function onMessage(event) {
   var json = JSON.parse(event.data);
+  console.log(json);
   if (json.type == 'gameboard') {
     var table = json.payload.table;
     for (index in table) {
-      switch (table[index]) {
-        case 120: cellElements[index].classList.add(X_CLASS); break;
-        case 111: cellElements[index].classList.add(CIRCLE_CLASS); break;
-      }
+      cellElements[index].classList.add(getSymbol(table[index]));
     }
   }
+  else if (json.type == 'winner') {
+    var symbol = getSymbol(json.payload.symbol);
+    endGame(symbol);
+  }
+  else if (json.type == 'restart') {
+    startGame();
+  }
+  else if(json.type == 'symbol')
+  {
+    mySymbol = getSymbol(json.payload.symbol);
+    setBoardHoverClass();
+  }
+
 }

@@ -22,7 +22,9 @@ class TicTacToe{
         void place(int id, int row, int col);
         char checkWin();
         void restart();
-        bool registerPlayer(int id);
+        char registerPlayer(int id);
+        int getScoreX();
+        int getScoreO();
         void clientDisconnect(int id);
         cJSON *getGameBoard();
 };
